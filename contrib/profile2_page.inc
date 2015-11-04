@@ -24,8 +24,8 @@ function profile2_page_own($base_path) {
 /**
  * Profile view page.
  */
-function profile2_page_view($profile) {
-  return $profile->view('page');
+function profile2_page_view($profile, $page = NULL) {
+  return $profile->view('page', NULL, $page);
 }
 
 /**
@@ -89,4 +89,16 @@ function profile2_page_delete_confirm_form_submit($form, &$form_state) {
   $profile->delete();
   drupal_set_message(t('Deleted %label.', array('%label' => $profile->label)));
   $form_state['redirect'] = 'user/' . $profile->uid;
+}
+
+function profile2_page_view_for_user($type, $account = NUll) {
+  if ($account) {
+    $uid = $account->uid;
+  }
+  else {
+    global $user;
+    $uid = $user->uid;
+  }
+  // We dont want profile type tile within tab, so setting page flag as true.
+  return profile2_page_view(profile2_by_uid_load($uid, $type), true);
 }
