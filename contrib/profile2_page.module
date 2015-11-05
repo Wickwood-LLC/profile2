@@ -118,8 +118,8 @@ function profile2_page_menu() {
         'load arguments' => array($type_name),
         'access callback' => 'profile2_access',
         'access arguments' => array('view', 3),
-        'title callback' => 'profile2_page_title',
-        'title arguments' => array($type_name, NULL),
+        'title callback' => 'check_plain',
+        'title arguments' => array($type->getTranslation('label')),
         'type' => MENU_LOCAL_TASK,
         'file' => 'profile2_page.inc',
       );
@@ -130,7 +130,7 @@ function profile2_page_menu() {
   // then we need to create create default tab for user account page.
   if ($profile2_view_tab_count) {
     $items['user/%user/view/account'] = array(
-      'title' => 'My account',
+      'title' => 'Account',
       'type' => MENU_DEFAULT_LOCAL_TASK,
       'weight' => -10,
     );
