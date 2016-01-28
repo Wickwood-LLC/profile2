@@ -115,9 +115,8 @@ function profile2_page_menu() {
       $items['user/%user/view/' . $type_name] = array(
         'page callback' => 'profile2_page_view_for_user',
         'page arguments' => array(3, 1),
-        'load arguments' => array($type_name),
-        'access callback' => 'profile2_access',
-        'access arguments' => array('view', 3),
+        'access callback' => 'profile2_page_access',
+        'access arguments' => array(1, $type_name),
         'title callback' => 'check_plain',
         'title arguments' => array($type->getTranslation('label')),
         'type' => MENU_LOCAL_TASK,
@@ -137,6 +136,18 @@ function profile2_page_menu() {
   }
   return $items;
 }
+
+/**
+ * Menu item access callback - check if a user has access to a profile category.
+ * Created by copying profile2_category_access().
+ */
+function profile2_page_access($account, $type_name) {
+  // As there might be no profile yet, create a new object for being able to run
+  // a proper access check.
+  $profile = profile2_create(array('type' => $type_name, 'uid' => $account->uid));
+  return ($account->uid > 0 && $profile->type()->userCategory && profile2_access('view', $profile, $account));
+}
+
 
 /**
  * Menu load callback.
