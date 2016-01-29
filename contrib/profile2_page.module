@@ -322,3 +322,33 @@ function profile2_page_profile2_type_delete($type) {
     variable_set('menu_rebuild_needed', TRUE);
   }
 }
+
+/**
+ * Implements hook_menu_local_tasks_alter().
+ */
+function profile2_page_menu_local_tasks_alter(&$data, $router_item, $root_path) {
+  // Add local action link to edit the profile when viewing the profile.
+  if (preg_match("~user/%/view/([a-z]+[a-z_]*)~", $root_path, $match)) {
+    $uid = arg(1);
+    $item = menu_get_item("user/$uid/edit/{$match[1]}");
+    if ($item['access']) {
+      $item['title'] = t('Edit @type_name', array('@type_name' => $item['title']));
+      $data['actions']['output'][] = array(
+        '#theme' => 'menu_local_action',
+        '#link' => $item,
+      );
+    }
+  }
+  // Add local action link to view the profile when editing the profile.
+  if (preg_match("~user/%/edit/([a-z]+[a-z_]*)~", $root_path, $match)) {
+    $uid = arg(1);
+    $item = menu_get_item("user/$uid/view/{$match[1]}");
+    if ($item['access']) {
+      $item['title'] = t('View @type_name', array('@type_name' => $item['title']));
+      $data['actions']['output'][] = array(
+        '#theme' => 'menu_local_action',
+        '#link' => $item,
+      );
+    }
+  }
+}
