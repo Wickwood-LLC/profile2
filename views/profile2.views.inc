@@ -5,6 +5,22 @@
  */
 function profile2_views_data_alter(&$data) {
 
+  $data['profile_revision']['pid'] = array(
+    'title' => t('Profile item ID'),
+    'help' => t('ID of the profile item of the revision'),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
+    ),
+    'relationship' => array(
+      'title' => t('Revision profile'),
+      'help' => t('Relate to revision\'s profile'),
+      'handler' => 'views_handler_relationship',
+      'base' => 'profile',
+      'base field' => 'pid',
+      'label' => t('Revision profile'),
+    ),
+  );
+
   $data['profile_revision']['authorid'] = array(
     'title' => t('Author ID'),
     'help' => t('The user ID of the author of the revision'),
