@@ -122,6 +122,16 @@ function profile2_page_menu() {
         'type' => MENU_LOCAL_TASK,
         'file' => 'profile2_page.inc',
       );
+      $items['user/%user/revisions/' . $type_name] = array(
+        'page callback' => 'profile2_revisions_view_for_user',
+        'page arguments' => array($type_name, 1),
+        'access callback' => '_profile2_revision_tab_access',
+        'access arguments' => array($type_name, 1, array('view own profile revisions', 'view any profile revisions')),
+        'title callback' => 'check_plain',
+        'title arguments' => array($type->getTranslation('label')),
+        'type' => MENU_LOCAL_TASK,
+        'file' => 'profile2_page.revisions.inc',
+      );
     }
     $profile2_view_tab_count++;
   }
@@ -135,6 +145,25 @@ function profile2_page_menu() {
     );
   }
   return $items;
+}
+
+/**
+ * Implements hook_menu_alter()
+ */
+function profile2_page_menu_alter(&$items) {
+  //If user revisions from user_revisions module exists then make it default tab.
+  if (isset($items['user/%user/revisions'])) {
+    if (!isset($items['user/%user/revisions/list'])) {
+      $items['user/%user/revisions/list'] = array(
+        'title' => 'Account',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'weight' => -10,
+      );
+    }
+    else {
+      $items['user/%user/revisions/list']['title'] = 'Account';
+    }
+  }
 }
 
 /**
@@ -362,4 +391,9 @@ function profile2_page_menu_local_tasks_alter(&$data, $router_item, $root_path) 
       );
     }
   }
+}
+
+function _profile2_revision_tab_access($type, $account, $permissions) {
+  $profile = profile2_by_uid_load($account->uid, $type);
+  return _profile2_revision_access($profile, $permissions);
 }
