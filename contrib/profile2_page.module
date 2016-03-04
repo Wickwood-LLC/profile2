@@ -317,6 +317,9 @@ function profile2_page_uri_callback($profile) {
   if (!empty($type->data['use_page'])) {
     return array('path' => profile2_page_get_base_path($type) . '/' . $profile->uid);
   }
+  else if (!empty($type->data['use_tab'])) {
+    return array('path' => "user/{$profile->uid}/view/{$profile->type}");
+  }
   // Fall back to the default callback.
   return $profile->defaultUri();
 }
