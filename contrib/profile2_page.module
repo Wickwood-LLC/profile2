@@ -205,6 +205,17 @@ function profile2_page_access($account, $type_name) {
   return ($account->uid > 0 && $profile->type()->userCategory && profile2_access('view', $profile, $account));
 }
 
+/**
+ * Implements hook_admin_paths().
+ */
+function profile2_page_admin_paths() {
+  if (variable_get('node_admin_theme')) {
+    $paths = array(
+      'user/*/revisions/*' => TRUE,
+    );
+    return $paths;
+  }
+}
 
 /**
  * Menu load callback.
