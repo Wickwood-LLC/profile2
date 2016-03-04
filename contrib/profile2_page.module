@@ -132,6 +132,34 @@ function profile2_page_menu() {
         'type' => MENU_LOCAL_TASK,
         'file' => 'profile2_page.revisions.inc',
       );
+
+      $items['user/%user/revisions/' . $type_name . '/%/view'] = array(
+        'title' => 'Revisions',
+        //'load arguments' => array(3),
+        'page callback' => 'profile2_page_tab_revision_view',
+        'page arguments' => array($type_name, 1, 4),
+        'access callback' => '_profile2_revision_tab_access',
+        'access arguments' => array($type_name, 1, array('view own profile revisions', 'view any profile revisions')),
+        'file' => 'profile2_page.revisions.inc',
+      );
+      $items['user/%user/revisions/' . $type_name . '/%/revert'] = array(
+        'title' => 'Revert to earlier revision',
+        //'load arguments' => array(3),
+        'page callback' => 'profile2_page_tab_get_revision_revert',
+        'page arguments' => array($type_name, 1, 4),
+        'access callback' => '_profile2_revision_tab_access',
+        'access arguments' =>  array($type_name, 1, array('revert own profile revisions', 'revert any profile revisions')),
+        'file' => 'profile2_page.revisions.inc',
+      );
+      $items['user/%user/revisions/' . $type_name . '/%/delete'] = array(
+        'title' => 'Delete earlier revision',
+        //'load arguments' => array(3),
+        'page callback' => 'profile2_page_tab_get_revision_delete',
+        'page arguments' => array($type_name, 1, 4),
+        'access callback' => '_profile2_revision_tab_access',
+        'access arguments' =>  array($type_name, 1, array('delete own profile revisions', 'delete any profile revisions')),
+        'file' => 'profile2_page.revisions.inc',
+      );
     }
     $profile2_view_tab_count++;
   }

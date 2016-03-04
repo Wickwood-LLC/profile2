@@ -1270,6 +1270,8 @@ function profile2_revision_overview($profile) {
 
   $header = array(t('Revision'), array('data' => t('Operations'), 'colspan' => 2));
   $revisions = profile2_revision_list($profile);
+  $profile_type = $profile->type();
+  $tabbed_view = !empty($profile_type->data['use_tab']);
   $rows = array();
   $revert_permission = FALSE;
   if ((_profile2_revision_access($profile, array('revert own profile revisions', 'revert any profile revisions')) || user_access('administer profiles')) && profile2_access('update', $profile)) {
@@ -1284,9 +1286,15 @@ function profile2_revision_overview($profile) {
     $row = array();
     $operations = array();
     if ($revision->current_vid > 0) {
+      if ($tabbed_view) {
+        $view_link = "user/{$profile->uid}/revisions/{$profile->type}/{$revision->current_vid}/view";
+      }
+      else {
+        $view_link = "profile/$profile->pid/revisions/$revision->current_vid/view";
+      }
       $row[] = array(
         'data' => t('!date by !username', array(
-          '!date' => l(format_date($revision->timestamp), "profile/$profile->pid/revisions/$revision->current_vid/view"),
+          '!date' => l(format_date($revision->timestamp), $view_link),
           '!username' => theme('username', array('account' => $revision))
           )) . (($revision->log != '') ? '<p class="revision-log">' . filter_xss($revision->log) . '</p>' : ''),
         'class' => array('revision-current')
@@ -1294,17 +1302,27 @@ function profile2_revision_overview($profile) {
       $operations[] = array('data' => drupal_placeholder(t('current revision')), 'class' => array('revision-current'), 'colspan' => 2);
     }
     else {
+      if ($tabbed_view) {
+        $view_link = "user/{$profile->uid}/revisions/{$profile->type}/{$revision->vid}/view";
+        $revert_link = "user/{$profile->uid}/revisions/{$profile->type}/{$revision->vid}/revert";
+        $delete_link = "user/{$profile->uid}/revisions/{$profile->type}/{$revision->vid}/delete";
+      }
+      else {
+        $view_link = "profile/$profile->pid/revisions/$revision->vid/view";
+        $revert_link = "profile/$profile->pid/revisions/$revision->vid/revert";
+        $delete_link = "profile/$profile->pid/revisions/$revision->vid/delete";
+      }
       $row[] = array(
         'data' => t('!date by !username', array(
-          '!date' => l(format_date($revision->timestamp), "profile/$profile->pid/revisions/$revision->vid/view"),
+          '!date' => l(format_date($revision->timestamp), $view_link),
           '!username' => theme('username', array('account' => $revision))
         )) . (($revision->log != '') ? '<p class="revision-log">' . filter_xss($revision->log) . '</p>' : '')
       );
       if ($revert_permission) {
-        $operations[] = l(t('revert'), "profile/$profile->pid/revisions/$revision->vid/revert", array('query' => $query));
+        $operations[] = l(t('revert'), $revert_link, array('query' => $query));
       }
       if ($delete_permission) {
-        $operations[] = l(t('delete'), "profile/$profile->pid/revisions/$revision->vid/delete", array('query' => $query));
+        $operations[] = l(t('delete'), $delete_link,  array('query' => $query));
       }
     }
     $rows[] = array_merge($row, $operations);
