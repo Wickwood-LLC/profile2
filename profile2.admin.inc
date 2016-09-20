@@ -65,6 +65,18 @@ function profile2_type_form($form, &$form_state, $profile_type, $op = 'edit') {
     '#description' => t('Users with <em>Administer profiles</em> will be able to override this option.'),
   );
 
+  $user_roles = user_roles();
+  // exclude anonymous
+  unset($user_roles[DRUPAL_ANONYMOUS_RID]);
+  $rids = array_keys($user_roles);
+  $form['data']['roles'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Roles'),
+    '#description' => t('Check user roles that should have this profile.'),
+    '#options' => $user_roles,
+    '#default_value' => !empty($profile_type->data['roles']) ? $profile_type->data['roles'] : array_combine($rids, $rids)
+  );
+
   $form['actions'] = array('#type' => 'actions');
   $form['actions']['submit'] = array(
     '#type' => 'submit',
