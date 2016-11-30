@@ -548,7 +548,7 @@ function profile2_attach_form(&$form, &$form_state) {
         'class' => array('user-profile-form-revision-information'),
       ),
       '#weight' => 30,
-      '#access' => user_access('administer profiles'),
+      '#access' => user_access("edit any $type profile"),
     );
     $form['profile_' . $profile->type]['revision_information']['revision'] = array(
       '#type' => 'checkbox',
