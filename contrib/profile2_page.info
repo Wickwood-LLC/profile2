@@ -2,3 +2,6 @@ name = Profile2 pages
 description = Adds separate pages for viewing and editing profiles.
 core = 7.x
 dependencies[] = profile2
+
+version = "7.x-1.4"
+project = "profile2"
