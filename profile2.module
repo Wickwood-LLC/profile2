@@ -337,6 +337,23 @@ function profile2_type_delete(ProfileType $type) {
 }
 
 /**
+ * Implements hook_profile2_type_insert().
+ */
+function profile2_profile2_type_insert(ProfileType $type) {
+  // Do not directly issue menu rebuilds here to avoid potentially multiple
+  // rebuilds. Instead, let menu_get_item() issue the rebuild on the next page.
+  variable_set('menu_rebuild_needed', TRUE);
+}
+
+/**
+ * Implements hook_profile2_type_update().
+ */
+function profile2_profile2_type_update(ProfileType $type) {
+  // @see profile2_profile2_type_insert()
+  variable_set('menu_rebuild_needed', TRUE);
+}
+
+/**
  * Implements hook_profile2_type_delete()
  */
 function profile2_profile2_type_delete(ProfileType $type) {
@@ -346,6 +363,8 @@ function profile2_profile2_type_delete(ProfileType $type) {
     if ($pids) {
       profile2_delete_multiple($pids);
     }
+    // @see profile2_profile2_type_insert()
+    variable_set('menu_rebuild_needed', TRUE);
   }
 }
 
