@@ -380,7 +380,7 @@ function profile2_user_view($account, $view_mode, $langcode) {
           '#title' => $profile_type->getTranslation('label'),
           '#prefix' => '<a id="profile-' . $profile->type . '"></a>',
         );
-        $account->content['profile_' . $type]['view'] = $profile->view('account');
+        $account->content['profile_' . $type]['view'] = $profile->view($view_mode);
       }
     }
   }
