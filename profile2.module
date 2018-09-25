@@ -113,7 +113,7 @@ function profile2_menu() {
 
   // Define page which provides form to generate profiles using
   // Devel generate module.
-  if (module_exists('devel')) {
+  if (module_exists('devel_generate')) {
     $items['admin/config/development/generate/profile2'] = array(
       'title' => 'Generate profiles',
       'description' => 'Generate a given number of profiles for users. Optionally override current user profiles.',
