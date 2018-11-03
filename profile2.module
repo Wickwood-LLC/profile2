@@ -932,12 +932,11 @@ class Profile extends Entity {
   }
 
   public function defaultLabel() {
-    if (module_exists('profile2_i18n')) {
-      // Run the label through i18n_string() using the profile2_type label
-      // context, so the default label (= the type's label) gets translated.
-      return entity_i18n_string('profile2:profile2_type:' . $this->type . ':label', $this->label);
-    }
-    return $this->label;
+    // Return a label that combines the type name and user name, translatable.
+    return t('@type profile for @user', array(
+      '@type' => profile2_get_types($this->type)->getTranslation('label'),
+      '@user' => format_username($this->user()),
+    ));
   }
 
   public function buildContent($view_mode = 'full', $langcode = NULL) {
