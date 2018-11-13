@@ -16,7 +16,7 @@ function profile2_install() {
       'type' => 'main',
       'label' => t('Main profile'),
       'weight' => 0,
-      'data' => array('registration' => TRUE, 'use_page' => TRUE),
+      'data' => array('registration' => TRUE),
     ));
     $type->save();
     user_role_grant_permissions(DRUPAL_AUTHENTICATED_RID, array('edit own main profile', 'view own main profile'));

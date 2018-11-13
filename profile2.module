@@ -1173,3 +1173,23 @@ function profile2_by_uid_load($uid, $type_name) {
   }
   return FALSE;
 }
+
+/**
+ * Implements hook_preprocess_page().
+ *
+ * Fix the page titles on the profile2 edit tabs.
+ * We want the titles to be the full profile label, giving the user name & profile name.
+ */
+function profile2_preprocess_page(&$vars) {
+  // This is true when editing a profile in a tab.
+  if (!empty($vars['page']['content']['system_main']['#user_category'])) {
+    $ptype = $vars['page']['content']['system_main']['#user_category'];
+    if (!empty($vars['page']['content']['system_main']["profile_$ptype"])) {
+      $item = $vars['page']['content']['system_main']["profile_$ptype"];
+      // If we've found an item, and it has a profile2 entity, display the title.
+      if (!empty($item['#entity'])) {
+        $vars['title'] = $item['#entity']->label();
+      }
+    }
+  }
+}
