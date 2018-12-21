@@ -1088,6 +1088,21 @@ class Profile2Controller extends EntityAPIController {
     $query->addField('revision', 'authorid', 'revision_uid');
     return $query;
   }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function saveRevision($entity) {
+    // Provide timestamp for revision, if it is not set.
+    if (!isset($entity->timestamp)) {
+      $entity->timestamp = REQUEST_TIME;
+    }
+    // TODO: Not sure this is really necessary, but it is harmless.
+    if (!isset($entity->revision_timestamp)) {
+      $entity->revision_timestamp = REQUEST_TIME;
+    }
+    parent::saveRevision($entity);
+  }
 }
 
 /**
