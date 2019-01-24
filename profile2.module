@@ -403,11 +403,9 @@ function profile2_form_user_profile_form_alter(&$form, &$form_state) {
       }
       $form_state['profiles'][$profile->type] = $profile;
 
-      if (user_access('administer profiles') && $user->uid != $profile->uid) {
+      if (user_access('administer profiles') || $user->uid === $profile->uid &&
+          user_access("delete own {$profile->type} profile")) {
         $str_button_value = t('Delete profile');
-      }
-      elseif (user_access("delete own $profile->type profile") && $user->uid === $profile->uid) {
-        $str_button_value = t('Delete this profile');
       }
     }
     if (empty($profile->is_new) && !empty($str_button_value)) {

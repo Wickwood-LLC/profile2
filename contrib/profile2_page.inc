@@ -47,11 +47,9 @@ function profile2_form($form, &$form_state, $profile) {
     '#value' => t('Save'),
     '#weight' => 40,
   );
-  if (user_access('administer profiles') && $user->uid != $profile->uid) {
+  if (user_access('administer profiles') || $user->uid === $profile->uid &&
+      user_access("delete own {$profile->type} profile")) {
     $delete_button_label = t('Delete profile');
-  }
-  elseif (user_access("delete own $profile->type profile") && $user->uid === $profile->uid) {
-    $delete_button_label = t('Delete this profile');
   }
   if (empty($profile->is_new) && !empty($delete_button_label)) {
     $form['actions']['delete'] = array(
