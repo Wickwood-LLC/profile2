@@ -1444,3 +1444,15 @@ function _profile2_revision_access($profile, $perm) {
   }
   return $access && ($count[$profile->pid] > 1);
 }
+
+/**
+ * Implements hook_field_collection_entity_allow_revisions_alter().
+ */
+function profile2_field_collection_entity_allow_revisions_alter(&$retval, $entity_type, $bundle, $entity) {
+  if ($entity_type == 'profile2') {
+    $profile_type = profile2_get_types($bundle);
+    // If revision to be created by default and user does not allowed to decide
+    // to choose otherwise.
+    $retval[1] = !($profile_type->data['revisions'] && !user_access('allow to choose profile2 revision creation'));
+  }
+}
