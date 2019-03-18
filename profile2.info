@@ -6,3 +6,6 @@ files[] = profile2.info.inc
 files[] = profile2.test
 dependencies[] = entity
 configure = admin/structure/profiles
+
+version = "7.x-1.6"
+project = "profile2"

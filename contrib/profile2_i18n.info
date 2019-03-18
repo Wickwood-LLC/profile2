@@ -4,3 +4,6 @@ dependencies[] = profile2
 dependencies[] = i18n_string
 package = Multilingual - Internationalization
 core = 7.x
+
+version = "7.x-1.6"
+project = "profile2"
