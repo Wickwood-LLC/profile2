@@ -115,6 +115,41 @@ function profile2_page_menu() {
         'type' => MENU_LOCAL_TASK,
         'file' => 'profile2_page.inc',
       );
+      $items['user/%user/revisions/' . $type_name] = array(
+        'page callback' => 'profile2_revisions_view_for_user',
+        'page arguments' => array($type_name, 1),
+        'access callback' => '_profile2_revision_tab_access',
+        'access arguments' => array($type_name, 1, array('view own profile revisions', 'view any profile revisions')),
+        'title callback' => 'check_plain',
+        'title arguments' => array($type->getTranslation('label')),
+        'type' => MENU_LOCAL_TASK,
+        'file' => 'profile2_page.revisions.inc',
+      );
+
+      $items['user/%user/revisions/' . $type_name . '/%/view'] = array(
+        'title' => 'Revisions',
+        'page callback' => 'profile2_page_tab_revision_view',
+        'page arguments' => array($type_name, 1, 4),
+        'access callback' => '_profile2_revision_tab_access',
+        'access arguments' => array($type_name, 1, array('view own profile revisions', 'view any profile revisions')),
+        'file' => 'profile2_page.revisions.inc',
+      );
+      $items['user/%user/revisions/' . $type_name . '/%/revert'] = array(
+        'title' => 'Revert to earlier revision',
+        'page callback' => 'profile2_page_tab_get_revision_revert',
+        'page arguments' => array($type_name, 1, 4),
+        'access callback' => '_profile2_revision_tab_access',
+        'access arguments' =>  array($type_name, 1, array('revert own profile revisions', 'revert any profile revisions')),
+        'file' => 'profile2_page.revisions.inc',
+      );
+      $items['user/%user/revisions/' . $type_name . '/%/delete'] = array(
+        'title' => 'Delete earlier revision',
+        'page callback' => 'profile2_page_tab_get_revision_delete',
+        'page arguments' => array($type_name, 1, 4),
+        'access callback' => '_profile2_revision_tab_access',
+        'access arguments' =>  array($type_name, 1, array('delete own profile revisions', 'delete any profile revisions')),
+        'file' => 'profile2_page.revisions.inc',
+      );
     }
     $profile2_view_tab_count++;
   }
@@ -128,6 +163,38 @@ function profile2_page_menu() {
     );
   }
   return $items;
+}
+
+/**
+ * Implements hook_menu_alter()
+ */
+function profile2_page_menu_alter(&$items) {
+  //If user revisions from user_revisions module exists then make it default tab.
+  if (isset($items['user/%user/revisions'])) {
+    if (!isset($items['user/%user/revisions/list'])) {
+      $items['user/%user/revisions/list'] = array(
+        'title' => 'Account',
+        'type' => MENU_DEFAULT_LOCAL_TASK,
+        'weight' => -10,
+      );
+    }
+    else {
+      $items['user/%user/revisions/list']['title'] = 'Account';
+    }
+  }
+}
+
+/**
+ * Implements hook_admin_paths().
+ */
+function profile2_page_admin_paths() {
+  // Show revision pages admin overlay when possible.
+  if (variable_get('node_admin_theme')) {
+    $paths = array(
+      'user/*/revisions/*' => TRUE,
+    );
+    return $paths;
+  }
 }
 
 /**
@@ -309,4 +376,10 @@ function profile2_page_preprocess_page(&$vars) {
       $vars['title'] = $item['#entity']->label();
     }
   }
+}
+
+
+function _profile2_revision_tab_access($type, $account, $permissions) {
+  $profile = profile2_by_uid_load($account->uid, $type);
+  return _profile2_revision_access($profile, $permissions);
 }
