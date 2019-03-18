@@ -15,8 +15,9 @@ function profile2_entity_info() {
       'plural label' => t('Profiles'),
       'description' => t('Profile2 user profiles.'),
       'entity class' => 'Profile',
-      'controller class' => 'EntityAPIController',
+      'controller class' => 'Profile2Controller',
       'base table' => 'profile',
+      'revision table' => 'profile_revision',
       'fieldable' => TRUE,
       'view modes' => array(
         'account' => array(
@@ -26,6 +27,7 @@ function profile2_entity_info() {
       ),
       'entity keys' => array(
         'id' => 'pid',
+        'revision' => 'vid',
         'bundle' => 'type',
         'label' => 'label',
       ),
@@ -135,6 +137,39 @@ function profile2_menu() {
     'access arguments' => array('delete', 1),
     'file' => 'profile2.delete.inc',
   );
+
+  $items['profile/%profile2/revisions'] = array(
+    'title' => 'Revisions',
+    'page callback' => 'profile2_revision_overview',
+    'page arguments' => array(1),
+    'access callback' => '_profile2_revision_access',
+    'access arguments' => array(1, array('view own profile revisions', 'view any profile revisions')),
+  );
+  $items['profile/%profile2/revisions/%/view'] = array(
+    'title' => 'Revisions',
+    'load arguments' => array(3),
+    'page callback' => 'profile2_view',
+    'page arguments' => array(1, 'page'),
+    'access callback' => '_profile2_revision_access',
+    'access arguments' => array(1, array('view own profile revisions', 'view any profile revisions')),
+  );
+  $items['profile/%profile2/revisions/%/revert'] = array(
+    'title' => 'Revert to earlier revision',
+    'load arguments' => array(3),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('profile2_revision_revert_confirm', 1),
+    'access callback' => '_profile2_revision_access',
+    'access arguments' =>  array(1, array('revert own profile revisions', 'revert any profile revisions'))
+  );
+  $items['profile/%profile2/revisions/%/delete'] = array(
+    'title' => 'Delete earlier revision',
+    'load arguments' => array(3),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('profile2_revision_delete_confirm', 1),
+    'access callback' => '_profile2_revision_access',
+    'access arguments' =>  array(1, array('delete own profile revisions', 'delete any profile revisions')),
+  );
+
   return $items;
 }
 
@@ -175,6 +210,27 @@ function profile2_permission() {
     'administer profiles' =>  array(
       'title' => t('Administer profiles'),
       'description' => t('Edit and view all user profiles.'),
+    ),
+    'view own profile revisions' => array(
+      'title' => t('View own profile revisions'),
+    ),
+    'revert own profile revisions' => array(
+      'title' => t('Revert own profile revisions'),
+    ),
+    'delete own profile revisions' => array(
+      'title' => t('Delete own profile revisions'),
+    ),
+    'view any profile revisions' => array(
+      'title' => t('View any profile revisions'),
+    ),
+    'revert any profile revisions' => array(
+      'title' => t('Revert any profile revisions'),
+    ),
+    'delete any profile revisions' => array(
+      'title' => t('Delete any profile revisions'),
+    ),
+    'allow to choose profile2 revision creation' => array(
+      'title' => t('Allow to choose profile2 revision creation'),
     ),
   );
   // Generate per profile type permissions.
@@ -219,6 +275,8 @@ function profile2_get_types($type_name = NULL) {
  *
  * @param $pid
  *   Integer specifying the profile id.
+ * @param $vid
+ *   Integer specifying the revision id.
  * @param $reset
  *   A boolean indicating that the internal cache should be reset.
  * @return
@@ -226,8 +284,10 @@ function profile2_get_types($type_name = NULL) {
  *
  * @see profile2_load_multiple()
  */
-function profile2_load($pid, $reset = FALSE) {
-  $profiles = profile2_load_multiple(array($pid), array(), $reset);
+function profile2_load($pid, $vid = NULL, $reset = FALSE) {
+  $pids = (isset($pid) ? array($pid) : array());
+  $conditions = (isset($vid) ? array('vid' => $vid) : array());
+  $profiles = profile2_load_multiple($pids, $conditions, $reset);
   return reset($profiles);
 }
 
@@ -503,6 +563,50 @@ function profile2_form_user_register_form_alter(&$form, &$form_state) {
  */
 function profile2_attach_form(&$form, &$form_state) {
   foreach ($form_state['profiles'] as $type => $profile) {
+    // Add revision fields.
+    $profile_type = profile2_get_types($type);
+    $form['profile_' . $profile->type]['revision_information'] = array(
+      '#type' => 'fieldset',
+      '#title' => t('Revision information'),
+      '#collapsible' => TRUE,
+      '#attributes' => array(
+        'class' => array('user-profile-form-revision-information'),
+      ),
+      '#weight' => 30,
+      '#access' => user_access('administer profiles'),
+    );
+    $form['profile_' . $profile->type]['revision_information']['revision'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Create new revision'),
+      '#default_value' => $profile_type->data['revisions'],
+    );
+
+    // If revision to be created by default and user does not allowed to decide
+    // to choose otherwise.
+    if ($profile_type->data['revisions'] && !user_access('allow to choose profile2 revision creation')) {
+      $form['profile_' . $profile->type]['revision_information']['revision']['#type'] = 'value';
+    }
+
+    $form['profile_' . $profile->type]['revision_information']['log'] = array(
+      '#type' => 'textarea',
+      '#title' => t('Revision log message'),
+      '#rows' => 4,
+      '#description' => t('Provide an explanation of the changes you are making. This will help other authors understand your motivations.'),
+    );
+    $form['profile_' . $profile->type]['revision_information']['log']['#states'] = array(
+      'invisible' => array(
+        'input[name="revision"]' => array('checked' => FALSE),
+      ),
+    );
+    // If this user does not yet have a profile of this type, then force a new
+    // revision.
+    if (is_null($profile->pid)) {
+      $form['profile_' . $profile->type]['revision_information']['revision']['#default_value'] = 1;
+      $form['profile_' . $profile->type]['revision_information']['log']['#value']
+        = t('Initial revision.');
+      $form['profile_' . $profile->type]['revision_information']['#access'] = FALSE;
+    }
+
     $form['profile_' . $profile->type]['#tree'] = TRUE;
     $form['profile_' . $profile->type]['#parents'] = array('profile_' . $profile->type);
     field_attach_form('profile2', $profile, $form['profile_' . $profile->type], $form_state);
@@ -709,6 +813,16 @@ function profile2_form_submit_build_profile(&$form, &$form_state) {
       }
     }
     field_attach_submit('profile2', $profile, $form['profile_' . $type], $form_state);
+
+    // Handle revisions.
+    if (!empty($form_state['values']['profile_' . $type]['revision_information']['revision'])) {
+      global $user;
+      $profile->authorid = $user->uid;
+      $profile->timestamp = REQUEST_TIME;
+      $profile->log = empty($form_state['values']['profile_' . $type]['revision_information']['log']) ?
+          '' : $form_state['values']['profile_' . $type]['revision_information']['log'];
+      $profile->is_new_revision = TRUE;
+    }
   }
 }
 
@@ -874,6 +988,13 @@ class Profile extends Entity {
   public $pid;
 
   /**
+   * The profile version id.
+   *
+   * @var integer
+   */
+  public $vid;
+
+  /**
    * The name of the profile type.
    *
    * @var string
@@ -921,6 +1042,9 @@ class Profile extends Entity {
       // Initialize the label with the type label, so newly created profiles
       // have that as interim label.
       $values['label'] = $type->label;
+    }
+    if (!isset($values['log'])) {
+      $values['log'] = '';
     }
     parent::__construct($values, 'profile2');
   }
@@ -1022,6 +1146,39 @@ class Profile extends Entity {
 
     return parent::save();
   }
+
+  public function revisionDelete($revision_id) {
+    entity_get_controller($this->entityType)->revisionDelete($revision_id);
+  }
+}
+
+class Profile2Controller extends EntityAPIController {
+  /**
+   * {@inheritdoc}
+   */
+  function buildQuery($ids, $conditions = array(), $revision_id = FALSE) {
+    $query = parent::buildQuery($ids, $conditions, $revision_id);
+    $fields =& $query->getFields();
+    unset($fields['timestamp']);
+    $query->addField('revision', 'timestamp', 'revision_timestamp');
+    $query->addField('revision', 'authorid', 'revision_uid');
+    return $query;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function saveRevision($entity) {
+    // Provide timestamp for revision, if it is not set.
+    if (!isset($entity->timestamp)) {
+      $entity->timestamp = REQUEST_TIME;
+    }
+    // TODO: Not sure this is really necessary, but it is harmless.
+    if (!isset($entity->revision_timestamp)) {
+      $entity->revision_timestamp = REQUEST_TIME;
+    }
+    parent::saveRevision($entity);
+  }
 }
 
 /**
@@ -1087,6 +1244,8 @@ class ProfileType extends Entity {
  * @see Profile::view()
  */
 function profile2_view($profile, $view_mode = 'full', $langcode = NULL, $page = NULL) {
+  $account = user_load($profile->uid);
+  drupal_set_title(t('Revision of %profile of %user from %date', array('%profile' => $profile->label, '%user' => $account->name, '%date' => format_date($profile->revision_timestamp))), PASS_THROUGH);
   return $profile->view($view_mode, $langcode, $page);
 }
 
@@ -1238,4 +1397,179 @@ function profile2_preprocess_page(&$vars) {
       }
     }
   }
+}
+
+/**
+ * Return a list of all the existing revision numbers.
+ */
+function profile2_revision_list($profile) {
+  $revisions = array();
+  //  $result = db_select("profile_revision", "r"
+  $result = db_query('SELECT r.vid, r.log, r.authorid AS uid, p.vid AS current_vid, r.timestamp, u.name FROM {profile_revision} r LEFT JOIN {profile} p ON p.vid = r.vid INNER JOIN {users} u ON u.uid = r.authorid WHERE r.pid = :pid ORDER BY r.vid DESC', array(':pid' => $profile->pid));
+  foreach ($result as $revision) {
+    $revisions[$revision->vid] = $revision;
+  }
+  return $revisions;
+}
+
+/**
+ * Generate an overview table of older revisions of a profiles.
+ */
+function profile2_revision_overview($profile) {
+  $account = user_load($profile->uid);
+  drupal_set_title(t('Revisions for %profile_type profile of %user', array('%profile_type' => $profile->label, '%user' => $account->name)), PASS_THROUGH);
+
+  $header = array(t('Revision'), array('data' => t('Operations'), 'colspan' => 2));
+  $revisions = profile2_revision_list($profile);
+  $profile_type = $profile->type();
+  $tabbed_view = !empty($profile_type->data['use_tab']);
+  $rows = array();
+  $revert_permission = FALSE;
+  if ((_profile2_revision_access($profile, array('revert own profile revisions', 'revert any profile revisions')) || user_access('administer profiles')) && profile2_access('update', $profile)) {
+    $revert_permission = TRUE;
+  }
+  $delete_permission = FALSE;
+  if ((_profile2_revision_access($profile, array('delete own profile revisions', 'delete any profile revisions')) || user_access('administer profiles')) && profile2_access('delete', $profile)) {
+    $delete_permission = TRUE;
+  }
+  $query = drupal_get_destination();
+  foreach ($revisions as $revision) {
+    $row = array();
+    $operations = array();
+    if ($revision->current_vid > 0) {
+      if ($tabbed_view) {
+        $view_link = "user/{$profile->uid}/revisions/{$profile->type}/{$revision->current_vid}/view";
+      }
+      else {
+        $view_link = "profile/$profile->pid/revisions/$revision->current_vid/view";
+      }
+      $row[] = array(
+        'data' => t('!date by !username', array(
+          '!date' => l(format_date($revision->timestamp), $view_link),
+          '!username' => theme('username', array('account' => $revision))
+          )) . (($revision->log != '') ? '<p class="revision-log">' . filter_xss($revision->log) . '</p>' : ''),
+        'class' => array('revision-current')
+      );
+      $operations[] = array('data' => drupal_placeholder(t('current revision')), 'class' => array('revision-current'), 'colspan' => 2);
+    }
+    else {
+      if ($tabbed_view) {
+        $view_link = "user/{$profile->uid}/revisions/{$profile->type}/{$revision->vid}/view";
+        $revert_link = "user/{$profile->uid}/revisions/{$profile->type}/{$revision->vid}/revert";
+        $delete_link = "user/{$profile->uid}/revisions/{$profile->type}/{$revision->vid}/delete";
+      }
+      else {
+        $view_link = "profile/$profile->pid/revisions/$revision->vid/view";
+        $revert_link = "profile/$profile->pid/revisions/$revision->vid/revert";
+        $delete_link = "profile/$profile->pid/revisions/$revision->vid/delete";
+      }
+      $row[] = array(
+        'data' => t('!date by !username', array(
+          '!date' => l(format_date($revision->timestamp), $view_link),
+          '!username' => theme('username', array('account' => $revision))
+        )) . (($revision->log != '') ? '<p class="revision-log">' . filter_xss($revision->log) . '</p>' : '')
+      );
+      if ($revert_permission) {
+        $operations[] = l(t('revert'), $revert_link, array('query' => $query));
+      }
+      if ($delete_permission) {
+        $operations[] = l(t('delete'), $delete_link,  array('query' => $query));
+      }
+    }
+    $rows[] = array_merge($row, $operations);
+  }
+  $build['profile2_revisions_table'] = array(
+    '#theme' => 'table',
+    '#rows' => $rows,
+    '#header' => $header,
+  );
+  $build['profile2_back'] = array(
+    '#markup' => l(t("Back"), $_SERVER['HTTP_REFERER'])
+  );
+  return $build;
+}
+
+/**
+ * Implements hook_entity_view().
+ */
+function profile2_entity_view($entity, $type, $view_mode, $langcode) {
+  if ($type == 'profile2' && user_access('view own profile revisions')) {
+    $entity->content['revisions'] = array(
+      '#markup' => l(t('View Revisions'), "profile/$entity->pid/revisions"),
+      '#weight' => 999,
+    );
+  }
+}
+
+/**
+ * Ask for confirmation of the reversion to prevent against CSRF attacks.
+ */
+function profile2_revision_revert_confirm($form, $form_state, $profile_revision) {
+  $form['#profile_revision'] = $profile_revision;
+  return confirm_form($form, t('Are you sure you want to revert to the revision from %date?', array('%date' => format_date($profile_revision->revision_timestamp))), 'profile/' . $profile_revision->pid . '/revisions', '', t('Revert'), t('Cancel'));
+}
+function profile2_revision_revert_confirm_submit($form, &$form_state) {
+  $profile_revision = $form['#profile_revision'];
+  $profile_revision->revision = 1;
+  $profile_revision->log = t('Copy of the revision from %date.', array('%date' => format_date($profile_revision->revision_timestamp)));
+  $profile_revision->changed = REQUEST_TIME;
+  $profile_revision->timestamp = REQUEST_TIME;
+
+  entity_revision_set_default('profile2', $profile_revision);
+  entity_save('profile2', $profile_revision);
+  drupal_set_message(t('@type profile has been reverted back to the revision from %date.', array('@type' => $profile_revision->type, '%date' => format_date($profile_revision->revision_timestamp))));
+  $form_state['redirect'] = 'profile/' . $profile_revision->pid . '/revisions';
+}
+
+function profile2_revision_delete_confirm($form, $form_state, $profile_revision) {
+  $form['#profile_revision'] = $profile_revision;
+  return confirm_form($form, t('Are you sure you want to delete the revision from %date?', array('%date' => format_date($profile_revision->revision_timestamp))), 'profile/' . $profile_revision->pid . '/revisions', t('This action cannot be undone.'), t('Delete'), t('Cancel'));
+}
+
+function profile2_revision_delete_confirm_submit($form, &$form_state) {
+  $profile_revision = $form['#profile_revision'];
+  $deleted = entity_revision_delete('profile2', $profile_revision->vid);
+  if ($deleted)
+    drupal_set_message(t('@type profile revision from %date has been deleted.', array('@type' => $profile_revision->type, '%date' => format_date($profile_revision->revision_timestamp))));
+  else
+    drupal_set_message(t('Error occured while deleting revision.'), 'error');
+  $form_state['redirect'] = 'profile/' . $profile_revision->pid . '/revisions';
+}
+
+/**
+ *  Implements hook_views_api().
+ */
+function profile2_views_api() {
+  return array(
+    'api' => '3.0',
+    'path' => drupal_get_path('module', 'profile2') . '/views',
+  );
+}
+
+/**
+ * Access callback.
+ */
+function _profile2_revision_access($profile, $perm) {
+  global $user;
+  if (!is_array($perm)) {
+    $perm = array($perm);
+  }
+  $access = FALSE;
+  foreach ($perm as $permission) {
+    if ($profile->uid == $user->uid) {
+      $access = user_access($permission) || $access;
+    }
+    elseif (strpos($permission, 'own') === FALSE) {
+      $access = user_access($permission) || $access;
+    }
+  }
+  $count = &drupal_static(__FUNCTION__, array());
+  if (!isset($count[$profile->pid])) {
+    $count[$profile->pid] = db_select('profile_revision', 'pr')
+      ->condition('pr.pid', $profile->pid)
+      ->countQuery()
+      ->execute()
+      ->fetchField();
+  }
+  return $access && ($count[$profile->pid] > 1);
 }
