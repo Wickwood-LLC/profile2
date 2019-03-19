@@ -277,6 +277,17 @@ function profile2_page_form_profile2_type_form_alter(&$form, &$form_state) {
       ),
     ),
   );
+  $form['data']['edit_label'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Allow the profile title to be edited.'),
+    '#description' => t('If enabled, the title of the profile is editable, and is used as-is when displaying the profile.'),
+    '#default_value' => empty($type->is_new) && !empty($type->data['edit_label']),
+    '#states' => array(
+      'invisible' => array(
+       ':input[name="data[use_page]"]' => array('checked' => FALSE),
+      ),
+    ),
+  );
   $form['data']['use_tab'] = array(
     '#type' => 'checkbox',
     '#title' => t('Provide a separate tab for viewing profiles.'),
@@ -289,6 +300,16 @@ function profile2_page_form_profile2_type_form_alter(&$form, &$form_state) {
     ),
   );
   $form['data']['#tree'] = TRUE;
+  $form['#validate'][] = 'profile2_page_form_profile2_type_form_validate';
+}
+
+/**
+ * Ensure edit_label flag is never set if use_page is not set.
+ */
+function profile2_page_form_profile2_type_form_validate($form, &$form_state) {
+  if (empty($form_state['values']['data']['use_page'])) {
+    $form_state['values']['data']['edit_label'] = 0;
+  }
 }
 
 /**
