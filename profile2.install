@@ -336,12 +336,17 @@ function profile2_update_7104(&$sandbox) {
   $query->fields('p1', array('pid'));
   $query->join('profile', 'p2', 'p1.type = p2.type AND p1.uid = p2.uid AND p1.pid < p2.pid');
 
+  $total = $query->execute()->rowCount();
+  if (!$total) {
+    // No need to proceed if there are no duplicate profiles.
+    return;
+  }
   // Setup initial batch variables.
   if (!isset($sandbox['progress'])) {
     // The number of duplicate profiles deleted so far.
     $sandbox['progress'] = 0;
     // Total number of duplicate profiles that will be deleted.
-    $sandbox['total'] = $query->execute()->rowCount();
+    $sandbox['total'] = $total;
   }
 
   // Query the next 50 profiles to be deleted.
