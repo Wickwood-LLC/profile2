@@ -133,22 +133,38 @@ function profile2_page_menu() {
 /**
  * Implements hook_menu_local_tasks_alter().
  *
- * If viewing a profile sub-tab, change the URL of the edit tab (if present)
- * so it edits the profile, not the main account page.
- * Subject to edit permissions.
+ * If viewing or editing a profile sub-tab, change the URL of the
+ * edit or view tab (if present) so it edits or views the profile,
+ * not the main account page. Subject to permissions.
  */
 function profile2_page_menu_local_tasks_alter(&$data, $router_item, $root_path) {
-  if (strpos($root_path, 'user/%/view/') === 0) {
-    // Get the part of the URL containing "user/<uid>".
-    $href = $router_item['tab_root_href'] . '/edit';
+  if (strpos($root_path, 'user/%/') === 0 && isset($router_item['original_map'][3])) {
+    switch ($router_item['original_map'][2]) {
+      case 'view':
+        $href_suff = '/edit';
+        $ptype_pref = '';
+        $access = 'edit';
+        break;
+      case 'edit':
+        $href_suff = '';
+        $ptype_pref = '/view';
+        $access = 'view';
+        break;
+      default:
+        return;
+    }
     // Get the uid & profile type name.
     $uid = $router_item['original_map'][1];
     $ptype = $router_item['original_map'][3];
-    if (profile2_access('edit', profile2_by_uid_load($uid, $ptype))) {
-      //Walk the menu tree to find the account-edit link, and append the profile type.
-      array_walk_recursive($data, function (&$item) use ($href, $ptype) {
+
+    if (profile2_access($access, profile2_by_uid_load($uid, $ptype))) {
+      // Get the part of the link URL containing "user/<uid>".
+      $href = "{$router_item['tab_root_href']}$href_suff";
+
+      //Walk the menu tree to find the account link, and append the profile type.
+      array_walk_recursive($data, function (&$item) use ($href, $ptype_pref, $ptype) {
         if ($item == $href) {
-          $item .= "/$ptype";
+          $item .= "$ptype_pref/$ptype";
         }
       });
     }
