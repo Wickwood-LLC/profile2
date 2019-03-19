@@ -248,18 +248,23 @@ function profile2_update_7104(&$sandbox) {
     $sandbox['total'] = $query->execute()->rowCount();
   }
 
-  // Query the next 50 profiles to be deleted.
-  $query->range(0, 50);
-  $result = $query->execute();
+  if ($sandbox['total']) {
+    // Query the next 50 profiles to be deleted.
+    $query->range(0, 50);
+    $result = $query->execute();
 
-  // Update progress of removing duplicate profiles.
-  $sandbox['progress'] = $sandbox['progress'] + $result->rowCount();
+    // Update progress of removing duplicate profiles.
+    $sandbox['progress'] = $sandbox['progress'] + $result->rowCount();
 
-  // Delete duplicate profiles.
-  profile2_delete_multiple($result->fetchCol());
+    // Delete duplicate profiles.
+    profile2_delete_multiple($result->fetchCol());
 
-  // Update batch status.
-  $sandbox['#finished'] = $sandbox['progress'] / $sandbox['total'];
+    // Update batch status.
+    $sandbox['#finished'] = $sandbox['progress'] / $sandbox['total'];
+  }
+  else {
+    $sandbox['#finished'] = 1;
+  }
 
   if ($sandbox['#finished'] >= 1) {
     // Add a unique key on type + uid.
