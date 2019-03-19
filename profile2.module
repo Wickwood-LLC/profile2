@@ -934,7 +934,7 @@ class Profile extends Entity {
   public function defaultLabel() {
     $type = profile2_get_types($this->type);
     if (!empty($type->data['edit_label'])) {
-      return $this->getTranslation('label');
+      return $this->label;
     }
     else {
       // Return a label that combines the type name and user name, translatable.
