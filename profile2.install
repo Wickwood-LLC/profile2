@@ -373,7 +373,7 @@ function profile2_update_7104(&$sandbox) {
 /**
  * Add revisioning support.
  */
-function profile2_update_7105() {
+/*function profile2_update_7105() {
   db_add_field('profile', 'vid', _profile2_vid_field());
 
   $profile_revision = _profile2_revision_table();
@@ -394,4 +394,4 @@ function profile2_update_7105() {
     $profile_type->data['revisions'] = 0;
     $profile_type->save();
   }
-}
+}*/
