@@ -323,6 +323,16 @@ function profile2_page_form_profile2_type_form_alter(&$form, &$form_state) {
     ),
   );
   $form['data']['#tree'] = TRUE;
+  $form['#validate'][] = 'profile2_page_form_profile2_type_form_validate';
+}
+
+/**
+ * Ensure edit_label flag is never set if use_page is not set.
+ */
+function profile2_page_form_profile2_type_form_validate($form, &$form_state) {
+  if (empty($form_state['values']['data']['use_page'])) {
+    $form_state['values']['data']['edit_label'] = 0;
+  }
 }
 
 /**
