@@ -973,16 +973,13 @@ class Profile extends Entity {
   }
 
   public function save() {
-    // Don't create a new profile if the user already have one of the same type.
+    // Don't create a new profile if the user already has one of the same type.
     $existing_profile = profile2_load_by_user($this->uid, $this->type);
     if (empty($this->pid) && !empty($existing_profile)) {
-      watchdog('profile2_create', serialize(array(
-        'message' => 'Profile already exists',
-        'uid' => $this->uid,
-        'type' => $this->type,
-        'path' => current_path(),
-        'logged_in_user' => $GLOBALS['user']->uid,
-      )), array(), WATCHDOG_WARNING);
+      watchdog('profile2_create', '@type profile already exists for user @uid', array(
+        '@uid' => $this->uid,
+        '@type' => $this->type,
+      ), WATCHDOG_WARNING);
       return;
     }
 
